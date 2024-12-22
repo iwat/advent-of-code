@@ -122,18 +122,19 @@ class DirectionalKeypad(Keypad):
 
         options = set()
 
-        moves = ''
-        if dy > 0:
-            moves += 'v'*(dy)
-        else:
-            moves += '^'*(-dy)
-        if dx < 0:
-            moves += '<'*(-dx)
-        else:
-            moves += '>'*(dx)
-        options.add(moves)
+        if self.key != '<':
+            moves = ''
+            if dy > 0:
+                moves += 'v'*(dy)
+            else:
+                moves += '^'*(-dy)
+            if dx < 0:
+                moves += '<'*(-dx)
+            else:
+                moves += '>'*(dx)
+            options.add(moves)
 
-        if self.key != '<' and k != '<':
+        if k != '<':
             moves = ''
             if dx < 0:
                 moves += '<'*(-dx)
