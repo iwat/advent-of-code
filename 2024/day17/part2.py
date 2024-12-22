@@ -1,5 +1,4 @@
-import datetime
-
+import collections
 
 def resolve(state, operand):
     if operand <= 3:
