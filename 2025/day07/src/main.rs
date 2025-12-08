@@ -1,5 +1,6 @@
-use std::{error::Error, fs};
+use std::{collections::HashMap, error::Error, fs};
 
+#[allow(dead_code)]
 fn part1() -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string("input.txt")?;
     let input = input.trim();
@@ -39,6 +40,41 @@ fn part1() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn part2() -> Result<(), Box<dyn Error>> {
+    let input = fs::read_to_string("input.txt")?;
+    let input = input.trim();
+    let lines = input.lines().collect::<Vec<&str>>();
+
+    let mut visited = HashMap::<(usize, usize), u64>::new();
+
+    for line_idx in (0..lines.len()).rev() {
+        for char_idx in 0..lines[line_idx].len() {
+            let c = lines[line_idx].chars().nth(char_idx).unwrap();
+            if visited.contains_key(&(line_idx + 1, char_idx)) {
+                if c == '.' {
+                    visited.insert((line_idx, char_idx), visited[&(line_idx + 1, char_idx)]);
+                } else if c == '^' {
+                    let mut sum_score = 0;
+                    if let Some(score) = visited.get(&(line_idx + 1, char_idx + 1)) {
+                        sum_score += score;
+                    }
+                    if let Some(score) = visited.get(&(line_idx + 1, char_idx - 1)) {
+                        sum_score += score;
+                    }
+                    visited.insert((line_idx, char_idx), sum_score);
+                } else if c == 'S' {
+                    println!("S = {:?}", visited[&(line_idx + 1, char_idx)]);
+                }
+            } else {
+                visited.insert((line_idx, char_idx), 1);
+            }
+        }
+        println!("{}", lines[line_idx]);
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-    part1()
+    part2()
 }
