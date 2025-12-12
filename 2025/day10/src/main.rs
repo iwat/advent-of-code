@@ -1,5 +1,9 @@
 use core::fmt;
-use std::{error::Error, fs};
+use std::{
+    collections::{HashMap, VecDeque},
+    error::Error,
+    fs,
+};
 
 struct BinaryVec<'a> {
     data: &'a Vec<u32>,
@@ -81,10 +85,45 @@ impl Machine {
             .map(|vv| vv.parse().unwrap())
             .collect();
     }
+
+    fn solve(&self) -> Result<u32, Box<dyn Error>> {
+        let mut known_states = HashMap::<u32, u32>::new();
+        let mut queue = VecDeque::<(u32, u32)>::new();
+        known_states.insert(0, 0);
+        queue.push_front((0, 0));
+        while !queue.is_empty() {
+            let (state, depth) = queue.pop_front().unwrap();
+            if state == self.goal {
+                continue;
+            }
+            for b in &self.buttons {
+                let new_state = state ^ b;
+                let new_depth = depth + 1;
+                println!(
+                    "State: {:b}, Button {:b}, New {:b}, Depth: {}",
+                    state, b, new_state, new_depth
+                );
+                if let Some(known_depth) = known_states.get(&new_state) {
+                    if new_depth < *known_depth {
+                        known_states.insert(new_state, new_depth);
+                        queue.push_back((new_state, new_depth));
+                    }
+                } else {
+                    known_states.insert(new_state, new_depth);
+                    queue.push_back((new_state, new_depth));
+                }
+            }
+        }
+        if let Some(depth) = known_states.get(&self.goal) {
+            Ok(*depth)
+        } else {
+            Err("No path found".into())
+        }
+    }
 }
 
 fn read_input() -> Result<Vec<Machine>, Box<dyn Error>> {
-    let file = fs::read_to_string("simple-input.txt")?;
+    let file = fs::read_to_string("input.txt")?;
     let mut machines = Vec::<Machine>::new();
 
     for line in file.lines() {
@@ -105,10 +144,14 @@ fn read_input() -> Result<Vec<Machine>, Box<dyn Error>> {
 }
 
 fn part1() -> Result<(), Box<dyn Error>> {
+    let mut sum_depth = 0;
     let machines = read_input()?;
     for m in machines {
-        println!("{:?}", m);
+        let depth = m.solve()?;
+        println!("{:?} = {}", m, depth);
+        sum_depth += depth;
     }
+    println!("Total depth: {}", sum_depth);
     Ok(())
 }
 
