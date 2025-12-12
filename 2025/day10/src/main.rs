@@ -5,6 +5,9 @@ use std::{
     fs,
 };
 
+use z3::{Optimize, SatResult, ast::Int};
+
+#[allow(dead_code)]
 struct BinaryVec<'a> {
     data: &'a Vec<u32>,
     bits: usize,
@@ -24,6 +27,7 @@ impl<'a> fmt::Debug for BinaryVec<'a> {
     }
 }
 
+#[allow(dead_code)]
 struct Machine {
     bits: u8,
     goal: u32,
@@ -50,6 +54,7 @@ impl fmt::Debug for Machine {
     }
 }
 
+#[allow(dead_code)]
 impl Machine {
     fn new(goal_str: &str) -> Self {
         let mut goal = 0u32;
@@ -122,6 +127,7 @@ impl Machine {
     }
 }
 
+#[allow(dead_code)]
 fn read_input() -> Result<Vec<Machine>, Box<dyn Error>> {
     let file = fs::read_to_string("input.txt")?;
     let mut machines = Vec::<Machine>::new();
@@ -143,6 +149,7 @@ fn read_input() -> Result<Vec<Machine>, Box<dyn Error>> {
     Ok(machines)
 }
 
+#[allow(dead_code)]
 fn part1() -> Result<(), Box<dyn Error>> {
     let mut sum_depth = 0;
     let machines = read_input()?;
@@ -155,6 +162,89 @@ fn part1() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn solve_v2(line: &str) -> Result<u64, &'static str> {
+    println!("line: {}", line);
+    let parts = line.split_whitespace().collect::<Vec<_>>();
+    let mut buttons = Vec::<Vec<u8>>::new();
+    for part in parts[1..parts.len() - 1].iter() {
+        let indexes = part[1..part.len() - 1]
+            .split(',')
+            .map(|s| s.parse::<u8>().unwrap())
+            .collect::<Vec<_>>();
+        //println!("button {:?}", indexes);
+        buttons.push(indexes);
+    }
+    let last_line = parts[parts.len() - 1];
+    let joltages = last_line[1..last_line.len() - 1]
+        .split(',')
+        .map(|s| s.parse::<u16>().unwrap())
+        .collect::<Vec<_>>();
+    //println!("joltages {:?}", joltages);
+
+    let consts = (1..=buttons.len())
+        .map(|i| Int::new_const(format!("b{}", i)))
+        .collect::<Vec<_>>();
+    //println!("consts {:?}", consts);
+    let opt = Optimize::new();
+    for j in 0..joltages.len() {
+        let mut exp = Int::from_u64(0);
+        for (i, cols) in buttons.iter().enumerate() {
+            if cols.contains(&(j as u8)) {
+                exp += &consts[i];
+            }
+        }
+        opt.assert(&exp.eq(&Int::from_u64(joltages[j] as u64)));
+    }
+
+    let mut minimize = Int::from_u64(0);
+    for c in &consts {
+        opt.assert(&c.ge(&Int::from_u64(0)));
+        minimize += c;
+    }
+    opt.minimize(&minimize);
+
+    //println!("optimizer {:?}", opt);
+
+    match opt.check(&[]) {
+        SatResult::Sat => {
+            let model = opt.get_model().ok_or("Optimizer should have a model")?;
+
+            println!("Found optimal solution:");
+            let mut total = 0;
+            for c in &consts {
+                let val = model
+                    .get_const_interp(c)
+                    .ok_or("Should get value")?
+                    .as_u64()
+                    .ok_or("Value should be u64")?;
+                println!("{}: {}", c, val);
+                total += val;
+            }
+            println!("Presses: {}", total);
+            Ok(total)
+        }
+        SatResult::Unsat => Err("The constraints are unsatisfiable."),
+        SatResult::Unknown => Err("The solver returned unknown."),
+    }
+}
+
+fn part2() -> Result<(), Box<dyn Error>> {
+    let mut sum_depth = 0u64;
+
+    let file = fs::read_to_string("input.txt")?;
+    for line in file.lines() {
+        let line = line.trim();
+        if line == "" {
+            continue;
+        }
+        let depth = solve_v2(line);
+        sum_depth += depth?;
+    }
+
+    println!("Total presses: {}", sum_depth);
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-    part1()
+    part2()
 }
